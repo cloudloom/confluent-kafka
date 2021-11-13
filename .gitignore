@@ -1,0 +1,4 @@
+.idea
+kafka/data
+zookeeper/data
+zookeeper/log
