@@ -1,4 +1,4 @@
-#Confluent Platform
+# Confluent Platform
 
 ## 🔗 Get Started
 
