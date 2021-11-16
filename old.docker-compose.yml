@@ -1,88 +1,115 @@
 ---
-version: '2'
+version: '3.5'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.0
-    hostname: zookeeper
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_PORT: 9999
       KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/zookeeper_server_jaas.conf
         -Dzookeeper.authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
-        -Dzookeeper.allowSaslFailedClients=false
-        -Dzookeeper.requireClientAuthScheme=sasl
+        -Dzookeeper.allowSaslFailedClients=false -Dzookeeper.requireClientAuthScheme=sasl
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    hostname: zookeeper
+    image: confluentinc/cp-zookeeper
+    ports:
+      - published: 9999
+        target: 9999
+    restart: always
     volumes:
-      - ./zookeeper/log:/var/lib/zookeeper/log/version-2
-      - ./zookeeper/data:/var/lib/zookeeper/data/version-2
-      - ./zookeeper/zookeeper.sasl.jaas.config:/etc/kafka/zookeeper_server_jaas.conf
+      - ./zookeeper/log:/var/lib/zookeeper/log/version-2:rw
+      - ./zookeeper/data:/var/lib/zookeeper/data/version-2:rw
+      - ./zookeeper/zookeeper.sasl.jaas.config:/etc/kafka/zookeeper_server_jaas.conf:rw
   broker:
     image: confluentinc/cp-server:7.0.0
     hostname: broker
     container_name: broker
     depends_on:
       - zookeeper
-    ports:
-      - "29092:29092"
-      - "9092:9092"
-      - "9101:9101"
-    volumes:
-      - ./kafka/data:/var/lib/kafka/data
-      - ./kafka/kafka.jaas.conf:/etc/kafka/kafka_server_jaas.conf
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
-      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
-      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-      CONFLUENT_METRICS_ENABLE: 'true'
-      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:SASL_PLAINTEXT,HOST:SASL_PLAINTEXT
-      KAFKA_LISTENERS: EXTERNAL://:9092,HOST://:29092
-      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://broker:9092,HOST://localhost:29092
-      KAFKA_LISTENER_NAME_EXTERNAL_SASL_ENABLED_MECHANISMS: PLAIN
-      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: |
-        org.apache.kafka.common.security.plain.PlainLoginModule required \
-        username="broker" \
-        password="broker" \
-        user_broker="broker" \
-        user_controlcenter="controlcenter-secret" \
-        user_schemaregistry="schemaregistry-secret" \
-        user_ksqldb="ksqldb-secret" \
-        user_connect="connect-secret" \
-        user_sftp="sftp-secret" \
-        user_client="client-secret";
-      KAFKA_LISTENER_NAME_HOST_SASL_ENABLED_MECHANISMS: PLAIN
-      KAFKA_LISTENER_NAME_HOST_PLAIN_SASL_JAAS_CONFIG: |
-        org.apache.kafka.common.security.plain.PlainLoginModule required \
-        username="broker" \
-        password="broker" \
-        user_broker="broker" \
-        user_controlcenter="controlcenter-secret" \
-        user_schemaregistry="schemaregistry-secret" \
-        user_ksqldb="ksqldb-secret" \
-        user_connect="connect-secret" \
-        user_sftp="sftp-secret" \
-        user_client="client-secret";
-      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
-      KAFKA_INTER_BROKER_LISTENER_NAME: EXTERNAL
+      CONFLUENT_METRICS_ENABLE: "true"
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9092
+      CONFLUENT_METRICS_REPORTER_SASL_JAAS_CONFIG: org.apache.kafka.common.security.plain.PlainLoginModule
+        required username="client" password="client-secret";
       CONFLUENT_METRICS_REPORTER_SASL_MECHANISM: PLAIN
       CONFLUENT_METRICS_REPORTER_SECURITY_PROTOCOL: SASL_PLAINTEXT
-      CONFLUENT_METRICS_REPORTER_SASL_JAAS_CONFIG: "org.apache.kafka.common.security.plain.PlainLoginModule required \
-                    username=\"client\" \
-                    password=\"client-secret\";"
-      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf"
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_SUPPORT_CUSTOMER_ID: anonymous
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://broker:9092,HOST://localhost:29092
+      KAFKA_BROKER_ID: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_INTER_BROKER_LISTENER_NAME: EXTERNAL
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_PORT: 10000
+      KAFKA_LISTENERS: EXTERNAL://:9092,HOST://:29092
+      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule
+          required \
+
+          username="broker" \
+
+          password="broker" \
+
+          user_broker="broker" \
+
+          user_controlcenter="controlcenter-secret" \
+
+          user_schemaregistry="schemaregistry-secret" \
+
+          user_ksqldb="ksqldb-secret" \
+
+          user_connect="connect-secret" \
+
+          user_sftp="sftp-secret" \
+
+          user_client="client-secret";
+
+          '
+      KAFKA_LISTENER_NAME_EXTERNAL_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_LISTENER_NAME_HOST_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule
+          required \
+
+          username="broker" \
+
+          password="broker" \
+
+          user_broker="broker" \
+
+          user_controlcenter="controlcenter-secret" \
+
+          user_schemaregistry="schemaregistry-secret" \
+
+          user_ksqldb="ksqldb-secret" \
+
+          user_connect="connect-secret" \
+
+          user_sftp="sftp-secret" \
+
+          user_client="client-secret";
+
+          '
+      KAFKA_LISTENER_NAME_HOST_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:SASL_PLAINTEXT,HOST:SASL_PLAINTEXT
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    ports:
+      - published: 9092
+        target: 9092
+      - published: 10000
+        target: 10000
+      - published: 29092
+        target: 29092
+    restart: always
+    volumes:
+      - ./kafka/data:/var/lib/kafka/data:rw
+      - ./kafka/kafka.jaas.conf:/etc/kafka/kafka_server_jaas.conf:rw
+
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.0.0
@@ -203,8 +230,8 @@ services:
       CONTROL_CENTER_AUTH_RESTRICTED_ROLES: Restricted
       CONTROL_CENTER_AUTH_SESSION_EXPIRATION_MS: 600000
     volumes:
-      - ./control-center/propertyfile.jaas:/propertyfile.jaas
-      - ./control-center/password.properties:/password.properties
+      - ./control-center/propertyfile.jaas:/propertyfile.jaas:rw
+      - ./control-center/password.properties:/password.properties:rw
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.0.0
     hostname: ksqldb-server

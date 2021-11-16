@@ -1,2 +1,1 @@
-docker-compose down
-docker rm -f $(docker ps -a -q)
+docker-compose -f base.yml -f sasl-plain.yml down -v --remove-orphans
